@@ -1,1 +1,4 @@
 .idea
+__pycache__
+.ipynb_checkpoints/
+get_started_workspace.ipynb
