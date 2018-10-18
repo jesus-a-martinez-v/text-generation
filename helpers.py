@@ -18,7 +18,7 @@ from keras.layers.wrappers import TimeDistributed
 from keras.models import Input, Model
 from keras.optimizers import RMSprop
 
-SEQUENCE_SIZE = 160
+# SEQUENCE_SIZE = 160
 
 
 def char_rnn_model(num_chars, num_layers, num_nodes=512, dropout=0.1):
@@ -78,9 +78,9 @@ def find_python(root_directory):
     return matches
 
 
-root_directory = random.__file__.rsplit('/', 1)[0]  # Many modules are stored in the same directory as the random module.
-sources = find_python(root_directory)
-print(len(sources))
+# root_directory = random.__file__.rsplit('/', 1)[0]  # Many modules are stored in the same directory as the random module.
+# sources = find_python(root_directory)
+# print(len(sources))
 
 
 def replacer(value):
@@ -130,42 +130,42 @@ def replace_literals(st):
     return ''.join(res) + st[start_text:]
 
 
-replace_literals('this = "wrong\n')
+# replace_literals('this = "wrong\n')
 
-COMMENT_RE = re.compile("#.*")
-python_code = []
+# COMMENT_RE = re.compile("#.*")
+# python_code = []
 
-for file_name in sources:
-    try:
-        with open(file_name, 'r') as f:
-            source = f.read()
-    except UnicodeDecodeError:
-        print(f'Could not read {file_name}')
+# for file_name in sources:
+#     try:
+#         with open(file_name, 'r') as f:
+#             source = f.read()
+#     except UnicodeDecodeError:
+#         print(f'Could not read {file_name}')
 
-    source = replace_literals(source)
-    source = COMMENT_RE.sub('', source)
-    python_code.append(source)
+#     source = replace_literals(source)
+#     source = COMMENT_RE.sub('', source)
+#     python_code.append(source)
 
-python_code = '\n\n\n'.join(python_code)
-len(python_code)
+# python_code = '\n\n\n'.join(python_code)
+# len(python_code)
 
-python_chars = list(sorted(set(python_code)))
-python_char_to_index = {ch: index for index, ch in enumerate(python_chars)}
-print(len(python_chars))
+# python_chars = list(sorted(set(python_code)))
+# python_char_to_index = {ch: index for index, ch in enumerate(python_chars)}
+# print(len(python_chars))
 
-python_model = char_rnn_model(len(python_chars), num_layers=2, num_nodes=640, dropout=0)
-print(python_model.summary())
+# python_model = char_rnn_model(len(python_chars), num_layers=2, num_nodes=640, dropout=0)
+# print(python_model.summary())
 
-early = EarlyStopping(monitor='loss', min_delta=0.03, patience=3, mode='auto')
+# early = EarlyStopping(monitor='loss', min_delta=0.03, patience=3, mode='auto')
 
-BATCH_SIZE = 256
-generator = data_generator(python_code, python_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE)
-python_model.fit_generator(
-    generator,
-    epochs=60,
-    callbacks=[early],
-    steps_per_epoch=2 * len(python_code) / (BATCH_SIZE * 160)
-)
+# BATCH_SIZE = 256
+# generator = data_generator(python_code, python_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE)
+# python_model.fit_generator(
+#     generator,
+#     epochs=60,
+#     callbacks=[early],
+#     steps_per_epoch=2 * len(python_code) / (BATCH_SIZE * 160)
+# )
 
 
 def generate_code(model, start_with='\ndef ', end_with='\n\n', diversity=1.0):
@@ -195,26 +195,26 @@ def generate_code(model, start_with='\ndef ', end_with='\n\n', diversity=1.0):
             break
 
 
-for i in range(20):
-    for ch in generate_code(python_model):
-        sys.stdout.write(ch)
-    print()
+# for i in range(20):
+#     for ch in generate_code(python_model):
+#         sys.stdout.write(ch)
+#     print()
 
-BATCH_SIZE = 512
+# BATCH_SIZE = 512
 
-flat_model = char_rnn_model(len(python_chars), num_layers=1, num_nodes=512, dropout=0)
+# flat_model = char_rnn_model(len(python_chars), num_layers=1, num_nodes=512, dropout=0)
 
-early = EarlyStopping(monitor='loss', min_delta=0.03, patience=3, mode='auto')
+# early = EarlyStopping(monitor='loss', min_delta=0.03, patience=3, mode='auto')
 
-generator = data_generator(python_code, python_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE)
-flat_model.fit_generator(
-    generator,
-    epochs=60,
-    callbacks=[early],
-    steps_per_epoch=2 * len(python_code) / (BATCH_SIZE * 160)
-)
+# generator = data_generator(python_code, python_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE)
+# flat_model.fit_generator(
+#     generator,
+#     epochs=60,
+#     callbacks=[early],
+#     steps_per_epoch=2 * len(python_code) / (BATCH_SIZE * 160)
+# )
 
-example_code = 'if a == 2:\n    b = 1\nelse:\n    b = 2\n'
+# example_code = 'if a == 2:\n    b = 1\nelse:\n    b = 2\n'
 
 
 def activations(model, code):
@@ -228,8 +228,8 @@ def activations(model, code):
     return f([x])[0][0]
 
 
-act = activations(flat_model, example_code)
-print(act.shape)
+# act = activations(flat_model, example_code)
+# print(act.shape)
 
 
 def interesting_neurons(act):
@@ -242,8 +242,8 @@ def interesting_neurons(act):
     return result
 
 
-neurons = interesting_neurons(act)
-print(len(neurons))
+# neurons = interesting_neurons(act)
+# print(len(neurons))
 
 
 def visualize_neurons(neurons, code, act, cell_size=12):
@@ -264,8 +264,8 @@ def visualize_neurons(neurons, code, act, cell_size=12):
     return Image(data=f.getvalue())
 
 
-img = visualize_neurons(neurons, example_code, act)
-display(img)
+# img = visualize_neurons(neurons, example_code, act)
+# display(img)
 
 
 def image_for_code(code):
@@ -274,15 +274,15 @@ def image_for_code(code):
     return visualize_neurons(neurons, code, act)
 
 
-display(image_for_code('if (a == 2) and ((b == 1) or (c == 2)):'))
+# display(image_for_code('if (a == 2) and ((b == 1) or (c == 2)):'))
 
-code = 'if (a == 2) and ((b == 1) or (c == 2)):'
-mask = '   ________     ____________________ '
-act = activations(flat_model, code)
-positive = [index for index, ch in enumerate(mask) if ch == '_']
-negative = [index for index, ch in enumerate(mask) if ch != '_']
+# code = 'if (a == 2) and ((b == 1) or (c == 2)):'
+# mask = '   ________     ____________________ '
+# act = activations(flat_model, code)
+# positive = [index for index, ch in enumerate(mask) if ch == '_']
+# negative = [index for index, ch in enumerate(mask) if ch != '_']
 
-neurons = np.argsort(act[positive].sum(axis=0) - act[negative].sum(axis=0))[-5:]
+# neurons = np.argsort(act[positive].sum(axis=0) - act[negative].sum(axis=0))[-5:]
 
-img = visualize_neurons(neurons, code, act)
-display(img)
+# img = visualize_neurons(neurons, code, act)
+# display(img)
