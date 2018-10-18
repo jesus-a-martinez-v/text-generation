@@ -135,32 +135,33 @@ replace_literals('this = "wrong\n')
 COMMENT_RE = re.compile("#.*")
 python_code = []
 
-for fn in sources:
+for file_name in sources:
     try:
-        with open(fn, 'r') as fin:
-            src = fin.read()
+        with open(file_name, 'r') as f:
+            source = f.read()
     except UnicodeDecodeError:
-        print(f'Could not read {fn}')
+        print(f'Could not read {file_name}')
 
-    src = replace_literals(src)
-    src = COMMENT_RE.sub('', src)
-    python_code.append(src)
+    source = replace_literals(source)
+    source = COMMENT_RE.sub('', source)
+    python_code.append(source)
 
 python_code = '\n\n\n'.join(python_code)
 len(python_code)
 
-py_chars = list(sorted(set(python_code)))
-py_char_to_index = {ch: index for index, ch in enumerate(py_chars)}
-print(len(py_chars))
+python_chars = list(sorted(set(python_code)))
+python_char_to_index = {ch: index for index, ch in enumerate(python_chars)}
+print(len(python_chars))
 
-py_model = char_rnn_model(len(py_chars), num_layers=2, num_nodes=640, dropout=0)
-print(py_model.summary())
+python_model = char_rnn_model(len(python_chars), num_layers=2, num_nodes=640, dropout=0)
+print(python_model.summary())
 
 early = EarlyStopping(monitor='loss', min_delta=0.03, patience=3, mode='auto')
 
 BATCH_SIZE = 256
-py_model.fit_generator(
-    data_generator(python_code, py_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE),
+generator = data_generator(python_code, python_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE)
+python_model.fit_generator(
+    generator,
     epochs=60,
     callbacks=[early],
     steps_per_epoch=2 * len(python_code) / (BATCH_SIZE * 160)
@@ -173,39 +174,41 @@ def generate_code(model, start_with='\ndef ', end_with='\n\n', diversity=1.0):
     yield generated
 
     for i in range(2000):
-        x = np.zeros(shape=(1, len(generated), len(py_chars)))
+        x = np.zeros(shape=(1, len(generated), len(python_chars)))
         for t, char in enumerate(generated):
-            x[0, t, py_char_to_index[char]] = 1.0
-        preds = model.predict(x)[0]
+            x[0, t, python_char_to_index[char]] = 1.0
+        predictions = model.predict(x)[0]
 
-        preds = np.asarray(preds[len(generated) - 1]).astype('float64')
-        preds = np.log(preds) / diversity
-        exp_preds = np.exp(preds)
-        preds = exp_preds / np.sum(exp_preds)
-        probas = np.random.multinomial(1, preds, 1)
-        next_index = np.argmax(probas)
-        next_char = py_chars[next_index]
+        predictions = np.asarray(predictions[len(generated) - 1]).astype('float64')
+        predictions = np.log(predictions) / diversity
+        exp_preds = np.exp(predictions)
+        predictions = exp_preds / np.sum(exp_preds)
+        probabilities = np.random.multinomial(1, predictions, 1)
+        next_index = np.argmax(probabilities)
+        next_char = python_chars[next_index]
 
         yield next_char
 
         generated += next_char
+
         if generated.endswith(end_with):
             break
 
 
 for i in range(20):
-    for ch in generate_code(py_model):
+    for ch in generate_code(python_model):
         sys.stdout.write(ch)
     print()
 
 BATCH_SIZE = 512
 
-flat_model = char_rnn_model(len(py_chars), num_layers=1, num_nodes=512, dropout=0)
+flat_model = char_rnn_model(len(python_chars), num_layers=1, num_nodes=512, dropout=0)
 
 early = EarlyStopping(monitor='loss', min_delta=0.03, patience=3, mode='auto')
 
+generator = data_generator(python_code, python_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE)
 flat_model.fit_generator(
-    data_generator(python_code, py_char_to_index, batch_size=BATCH_SIZE, sequence_size=SEQUENCE_SIZE),
+    generator,
     epochs=60,
     callbacks=[early],
     steps_per_epoch=2 * len(python_code) / (BATCH_SIZE * 160)
@@ -215,9 +218,9 @@ example_code = 'if a == 2:\n    b = 1\nelse:\n    b = 2\n'
 
 
 def activations(model, code):
-    x = np.zeros((1, len(code), len(py_char_to_index)))
+    x = np.zeros((1, len(code), len(python_char_to_index)))
     for t, char in enumerate(code):
-        x[0, t, py_char_to_index[char]] = 1.0
+        x[0, t, python_char_to_index[char]] = 1.0
 
     output = model.get_layer('lstm_layer_1').output
 
@@ -230,13 +233,13 @@ print(act.shape)
 
 
 def interesting_neurons(act):
-    res = []
+    result = []
 
     for n in np.argmax(act, axis=1):
-        if not n in res:
-            res.append(n)
+        if n not in result:
+            result.append(n)
 
-    return res
+    return result
 
 
 neurons = interesting_neurons(act)
@@ -244,14 +247,14 @@ print(len(neurons))
 
 
 def visualize_neurons(neurons, code, act, cell_size=12):
-    img = np.full(shape=(len(neurons) + 1, len(code), 3), fill_value=128)
+    image = np.full(shape=(len(neurons) + 1, len(code), 3), fill_value=128)
     scores = (act[:, neurons].T + 1) / 2
-    img[1:, :, 0] = 255 * (1 - scores)
-    img[1:, :, 1] = 255 * scores
+    image[1:, :, 0] = 255 * (1 - scores)
+    image[1:, :, 1] = 255 * scores
 
     f = BytesIO()
-    img = scipy.misc.imresize(img, float(cell_size), interp='nearest')
-    pil_img = PIL.Image.fromarray(img)
+    image = scipy.misc.imresize(image, float(cell_size), interp='nearest')
+    pil_img = PIL.Image.fromarray(image)
     draw = ImageDraw.Draw(pil_img)
 
     for index, ch in enumerate(code):
